@@ -1,0 +1,22 @@
+David Lax (dlax@uchicago.edu) 
+CS 232 Project 3 README
+
+
+My threat model: Attacker could be a MITM who can hear messages, and/or attempt replay attacks. 
+
+What I'm doing: 
+- Implementing a variant on TSL, with a Diffie-Hellman RSASign handshake prototocol, to negotiate the master secret between the two members on the channel without others discovering.
+- Sending encrypted counts of the number of sent / received (plaintext) messages so far, so that no man in the middle can pose as a user (client or server).
+Specifically, if a MITM doesn't send the properly hashed exact count, then the members will react to the interference by returning null. 
+- After the SecureChannel constructor has done its job with the handshake, it initializes a pair of AuthEncryptor and AuthDecryptor objects seeded with the derived master secret; then the SecureChannels can make use of a stream-cipher instead of sending plaintext messages.
+
+A user of this class would run with a main routine similar to the main method of SecureChannelTest.java; 
+The user initializes respective input and ouput Streams, a PRGen object, and an RSAKeyPair object.
+Then the user creates two SecureChannel objects, each with: the Streams in opposite order, the same PRGen, complementary RSAKeys from the pair, and that one isServer and the other isn't. 
+Initializing these objects will cause the constructors to initiate the DH_RSA handshake we discusseed in lecture. 
+Thereafter, the user can send and receive messages through the two members (colloquially, the client and the server) with calls to sendMessage() and receiveMessage(), passing the desired message in the case of sending.
+
+Expected protection from adversaries:
+Because of the authentic encryption and decryption designed in project1, the messages themselves are sent with the security properties of confidentiality (no eavesdropping on the actual messages) and integrity (no interference by a MITM will go unnoticed); 
+Confidentiality is guaranteed from the handshake, and if integrity or authenticity are broken via a MITM, one of the members will automatically close() the SecureChannel.
+Finally, the message counters, incremented for every read and sent message, prevent replay attacks because they are encoded via hash; the test for equality upon reading a message will return null and end the connection if a given hashed (message||count) is "replayed" at a later time. 
